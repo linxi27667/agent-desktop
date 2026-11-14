@@ -33,8 +33,8 @@ require a prompt.
 ## Platform behavior
 
 - Native AX element tokens identify individual controls, including twins. A stale
-  token never falls back to a look-alike search. Elements without a token need
-  whole-window uniqueness as described in the core skill.
+  token never falls back to a look-alike search. Elements without a token follow
+  the uniqueness rule of the core skill.
 - `menu` and `menubar` observations are application-owned and can omit `data.window`.
   An app without an ordinary window may still expose process-owned surfaces.
   Inspect `supported_surfaces` rather than assuming every surface exists.
