@@ -15,7 +15,7 @@ never authorizes `--headed`; only the user's explicit request does.
 
 ## Setup and permissions
 
-The sandbox provider on macOS is `macos`: a macOS VM that needs an Apple Silicon Mac, macOS 13 or later, and Xcode Command Line Tools. See `agent-browser.dev/desktop/sandboxes/macos`.
+The sandbox provider on macOS is `macos`: a macOS VM that needs an Apple Silicon Mac, macOS 13 or later on the host and in the guest, and Xcode Command Line Tools. The first setup needs a person in the guest window; clones need none. See `agent-browser.dev/desktop/sandboxes/macos`.
 
 `agent-desktop status` reports `permissions` and `supported_surfaces`.
 Accessibility must be `granted` for observation and actions; Screen Recording
@@ -62,3 +62,4 @@ Read the disposition before applying a fix. Match both the code and message.
 | `WINDOW_NOT_FOUND`: no window or requested surface | A running process need not own a window. Read `list-windows` and `list-surfaces`; wait for the needed surface instead of activating the app. |
 | `PERM_DENIED`: `private file parent is accessible by group or other users` | The state root is not private. Run `chmod 700 "${AGENT_DESKTOP_HOME:-$HOME/.agent-desktop}"`, or use a new state root and let the tool create it. |
 | `PERM_DENIED`: `private file parent is not owned by the effective user` | The directory belongs to another user. Point `AGENT_DESKTOP_HOME` at a new directory under your home and let the tool create it; do not take over someone else's state. |
+| `needs_setup` from `sandbox status` for a sandbox that worked before | The guest agent, `agent-desktop-guest`, is not running in the guest, or Accessibility is off for it. Run `sandbox stop <name>`, then `sandbox start <name> --window`. In the guest, turn on automatic login, run `sh "/Volumes/My Shared Files/guest-setup.sh"` in Terminal, and switch on **agent-desktop-guest** in System Settings > Privacy & Security > Accessibility. Then check `status` on the host. A sandbox set up by agent-desktop 1.3.0 needs this once. |
