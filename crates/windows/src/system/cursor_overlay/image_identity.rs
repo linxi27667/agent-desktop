@@ -13,15 +13,25 @@
 
 use std::path::Path;
 
-/// The file stem every image of this tool carries, with or without `.exe`.
+/// The canonical file stem of this tool's CLI image, with or without `.exe`.
 pub(crate) const IMAGE_STEM: &str = "agent-desktop";
 
-/// Windows paths are case-insensitive, so `AGENT-DESKTOP.EXE` names the same
-/// image as `agent-desktop.exe` and has to pass the same guards. Only the
-/// final component counts: a build tree whose directories are named after the
-/// project is not itself the project's binary.
+const ACCEPTED_IMAGE_STEMS: [&str; 3] = [
+    IMAGE_STEM,
+    "agent-desktop-win32-x64",
+    "agent-desktop-win32-arm64",
+];
+
+/// Windows paths are case-insensitive, so `AGENT-DESKTOP.EXE` and packaged
+/// platform stems such as `agent-desktop-win32-x64.exe` pass the same guards.
+/// Only the final component counts: a build tree whose directories are named
+/// after the project is not itself the project's binary.
 pub(crate) fn is_agent_desktop_image(path: &Path) -> bool {
-    image_stem(path).is_some_and(|stem| stem.eq_ignore_ascii_case(IMAGE_STEM))
+    image_stem(path).is_some_and(|stem| {
+        ACCEPTED_IMAGE_STEMS
+            .iter()
+            .any(|accepted| stem.eq_ignore_ascii_case(accepted))
+    })
 }
 
 /// The stem a refusal names, so a reader is told what was found and not only

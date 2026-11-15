@@ -121,11 +121,14 @@ fn rejects_version_args_after_json_flag_removal() {
 #[test]
 fn stop_on_error_halts_after_first_failure() {
     let args = BatchArgs {
-        commands_json: serde_json::json!([
-            {"command": "snapshot", "args": {}},
-            {"command": "version", "args": {}}
-        ])
-        .to_string(),
+        commands_json: Some(
+            serde_json::json!([
+                {"command": "snapshot", "args": {}},
+                {"command": "version", "args": {}}
+            ])
+            .to_string(),
+        ),
+        stdin: false,
         stop_on_error: true,
         timeout_ms: 60_000,
     };

@@ -21,6 +21,12 @@ fn the_installed_binary_is_recognised_with_and_without_its_extension() {
     )));
     assert!(is_agent_desktop_image(&under_build_tree("agent-desktop")));
     assert!(is_agent_desktop_image(Path::new("agent-desktop.exe")));
+    assert!(is_agent_desktop_image(&under_build_tree(
+        "agent-desktop-win32-x64.exe"
+    )));
+    assert!(is_agent_desktop_image(&under_build_tree(
+        "AGENT-DESKTOP-WIN32-ARM64.EXE"
+    )));
 }
 
 /// `QueryFullProcessImageNameW` reports whatever case the file system holds,

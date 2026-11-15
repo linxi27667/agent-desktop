@@ -25,6 +25,7 @@ fn each_stdin_command_rejects_invalid_utf8_before_dispatch() {
         vec!["type", "@s8f3k2p9:e1", "--stdin"],
         vec!["set-value", "@s8f3k2p9:e1", "--stdin"],
         vec!["clipboard-set", "--stdin"],
+        vec!["batch", "--stdin"],
     ] {
         let output = run_cli(&args, input);
         let response: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
@@ -41,4 +42,25 @@ fn each_stdin_command_rejects_invalid_utf8_before_dispatch() {
         assert!(!String::from_utf8_lossy(&output.stdout).contains("private-marker"));
         assert!(!String::from_utf8_lossy(&output.stderr).contains("private-marker"));
     }
+}
+
+#[test]
+fn batch_stdin_executes_version_from_pipe_and_rejects_conflicting_positional_json() {
+    let output = run_cli(
+        &["batch", "--stdin", "--stop-on-error"],
+        br#"[{"command":"version","args":{}}]"#,
+    );
+    let response: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
+    assert!(output.status.success(), "{response}");
+    assert_eq!(response["ok"], true);
+    assert_eq!(response["command"], "batch");
+    assert_eq!(response["data"]["completed_entries"], 1);
+    assert_eq!(response["data"]["results"][0]["command"], "version");
+    assert_eq!(response["data"]["results"][0]["ok"], true);
+
+    let conflict = run_cli(&["batch", "[]", "--stdin"], b"[]");
+    let conflict_json: serde_json::Value = serde_json::from_slice(&conflict.stdout).unwrap();
+    assert!(!conflict.status.success());
+    assert_eq!(conflict_json["ok"], false);
+    assert_eq!(conflict_json["error"]["code"], "INVALID_ARGS");
 }

@@ -129,7 +129,9 @@ where
     T: DeserializeOwned,
 {
     serde_json::from_value(args_or_empty(args)).map_err(|error| {
-        let diagnostic = crate::diagnostic::bounded_text(&error.to_string(), 512);
+        let scrubbed =
+            agent_desktop_core::commands::batch::sanitize_serde_diagnostic(&error.to_string());
+        let diagnostic = crate::diagnostic::bounded_text(&scrubbed, 512);
         AppError::invalid_input_with_suggestion(
             format!("Invalid batch args for '{command}': {diagnostic}"),
             "Use the same argument names and value types as the matching CLI command",

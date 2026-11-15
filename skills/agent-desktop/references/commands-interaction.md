@@ -110,7 +110,7 @@ agent-desktop focus @s8f3k2p9:e2
 - `set-value` writes the value directly through the semantic value path. It is faster than `type`, but it may not fire every UI callback. Use it for text fields, text areas and sliders.
 - Use `--stdin` with `type` or `set-value` to read text from a pipe or redirected file. Terminal input is rejected. Provide either `--stdin` or a command-line value.
 - The action timeout starts after the input ends; it doesn't limit this wait. Empty input and all line breaks are kept, including a final newline. Use `printf '%s'` to avoid adding one. Input must be valid UTF-8 without NUL bytes (`\0`). The limits are 10,000 bytes for `type` and 128 KiB for `set-value`.
-- Batch uses the JSON `text` or `value` field, which puts the text in process arguments. Run secret steps as separate `--stdin` commands.
+- Batch entries use the JSON `text` or `value` field. Pass `agent-desktop batch --stdin` (up to 1 MiB UTF-8 JSON) to keep batch payloads out of process arguments and redact write-entry `value`/`text` fields.
 - To enter the text `--stdin`, put it after `--`, as in `agent-desktop type @s8f3k2p9:e2 -- --stdin`.
 - `--stdin` keeps text out of process arguments and omits observed `value` fields from JSON results, including `post_state.value`. Other app text and screenshot artifacts aren't redacted.
 - A cell that exposes no value write is not directly editable. Activate it, take a fresh snapshot, and target the editor that appears. Some apps expose no editor and accept only keyboard input.

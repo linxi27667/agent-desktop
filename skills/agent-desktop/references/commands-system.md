@@ -112,7 +112,7 @@ agent-desktop clipboard-clear
 - `clipboard-set` writes one representation per call. `--file-url` and `--image` win over the positional text. Every `--file-url` path must exist, or `INVALID_ARGS`.
 - Use `clipboard-set --stdin` to read up to 128 KiB from a pipe or redirected file without putting it in process arguments. Terminal input is rejected. It cannot be combined with a command-line value, `--image`, or `--file-url`.
 - The command waits until the input ends. Empty input and all line breaks are kept, including a final newline. Use `printf '%s'` to avoid adding one. Input must be valid UTF-8 without NUL bytes (`\0`).
-- Batch uses the JSON `text` field, which puts the text in process arguments. Run secret steps as separate `--stdin` commands. To copy the text `--stdin`, use `agent-desktop clipboard-set -- --stdin`.
+- Batch entries use the JSON `text` field. Pass `batch --stdin` so the JSON payload is read from stdin instead of process arguments when entries include text or secrets. To copy the literal text `--stdin`, use `agent-desktop clipboard-set -- --stdin`.
 - A write that loses clipboard ownership mid-way reports `delivered_unverified`, not a false success.
 
 ## wait
@@ -161,9 +161,15 @@ agent-desktop batch '[
   {"command":"click","args":{"ref_id":"@s8f3k2p9:e1"}},
   {"command":"wait","args":{"event":"window-opened","app":"TextEdit","timeout":5000}}
 ]' --stop-on-error
+agent-desktop batch --stdin --stop-on-error <<'EOF'
+[
+  {"command":"set-value","args":{"ref_id":"@s8f3k2p9:e2","value":"hello"}},
+  {"command":"click","args":{"ref_id":"@s8f3k2p9:e1"}}
+]
+EOF
 ```
 
-Batch runs entries in order in one process. It is not a transaction. Entries use the same typed commands, policy checks and dispatch as the CLI. Use `args`, not `params`. Unknown fields are rejected, and nested `batch` is rejected. Pass `--stop-on-error` to halt at the first failure. Each entry may carry `"session": "id"`, otherwise it inherits the top-level session. An entry whose session ended before dispatch is `not_started` with reason `session_ended`. An ended top-level session refuses the whole batch with `INVALID_ARGS` (`details.kind: session_ended`) before any entry runs. Snapshot args use `skeleton`, `root`, `interactive_only`.
+Batch runs entries in order in one process. It is not a transaction. Pass `--stdin` (up to 1 MiB UTF-8 JSON, no NUL bytes, non-empty, non-TTY; mutually exclusive with the positional JSON argument) to keep entry text and values out of process arguments and redact write-entry `value`/`text` fields from output. Entries use the same typed commands, policy checks and dispatch as the CLI. Use `args`, not `params`. Unknown fields are rejected, and nested `batch` is rejected. Pass `--stop-on-error` to halt at the first failure. Each entry may carry `"session": "id"`, otherwise it inherits the top-level session. An entry whose session ended before dispatch is `not_started` with reason `session_ended`. An ended top-level session refuses the whole batch with `INVALID_ARGS` (`details.kind: session_ended`) before any entry runs. Snapshot args use `skeleton`, `root`, `interactive_only`.
 
 Wait entries use flat JSON keys matching the wait argument fields. For event waits, use `event` and optional `app`, `timeout` (milliseconds; defaults to 30000), `window`, and `window_id`. For example, the batch above waits up to five seconds for a new TextEdit window. `window` and `window_id` narrow only window lifecycle events (`window-opened`, `window-closed`, `focus-changed`); they do not scope text waits. In an action-then-event sequence, the batch captures the event baseline before the action, and does not start the action if that baseline read fails.
 

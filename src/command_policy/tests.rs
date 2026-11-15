@@ -12,7 +12,8 @@ fn permission_report_is_collected_only_for_permission_consumers() {
     let status = Commands::Status;
     let list_displays = Commands::ListDisplays;
     let batch = Commands::Batch(crate::cli_args::batch::BatchArgs {
-        commands_json: "[]".into(),
+        commands_json: Some("[]".into()),
+        stdin: false,
         stop_on_error: false,
         timeout_ms: 1,
     });

@@ -46,6 +46,8 @@ agent-desktop snapshot --root @s8f3k2p9:e3 -i --compact        # verify: re-read
 - Never skeleton a surface (`--surface menu`, `sheet`, `alert`). A surface is already focused.
 - An action that opens a menu, sheet or alert lists it in `data.surfaces`. Target that overlay next.
 - After an async step, use `wait` (see `commands-system.md`). A fixed sleep is a race.
+- When executing two or more actions whose refs are already known (`set-value` + `get` + `click`, or clipboard paste + key + `clipboard-clear`), send them in one `agent-desktop batch --stdin --stop-on-error` call instead of spawning separate CLI processes per step. Prefer headless `set-value --stdin` over `type` whenever the control supports value assignment.
+- On custom-drawn windows where `snapshot -i` reports zero client controls (or only title-bar chrome buttons), stop polling `find`/`snapshot` for nonexistent refs.
 
 ## Refs
 

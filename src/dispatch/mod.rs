@@ -31,16 +31,16 @@ use serde_json::Value;
 use crate::cli::Commands;
 
 pub(crate) fn dispatch(
-    mut cmd: Commands,
+    cmd: Commands,
     adapter: &dyn PlatformAdapter,
     permission_report: &PermissionReport,
     context: &CommandContext,
 ) -> Result<Value, AppError> {
     let read_only = !cmd.is_mutating();
-    let stdin = crate::cli_args::stdin::input(&mut cmd).is_some();
+    let redaction = crate::cli_args::stdin::redaction(&cmd);
     let result = dispatch_command(cmd, adapter, permission_report, context)
         .map_err(|error| disposition::settle_unknown_delivery(error, read_only));
-    crate::cli_args::stdin::redact_result(result, stdin)
+    crate::cli_args::stdin::redact_result(result, redaction)
 }
 
 fn dispatch_command(

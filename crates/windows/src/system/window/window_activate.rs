@@ -145,7 +145,7 @@ fn raise_with_budget(
         }
         #[cfg(test)]
         attempt_probe::begin_attempt(attempt);
-        bring_to_foreground(handle, evidence)?;
+        bring_to_foreground(handle, evidence, lease.deadline().remaining_ms())?;
         if is_owned_foreground(handle, evidence) {
             return Ok(());
         }
@@ -217,6 +217,7 @@ fn restore_if_iconic(
     handle: super::window_enum::WindowHandle,
     evidence: &WindowIdentityEvidence<'_>,
 ) -> Result<(), AdapterError> {
+    use windows_sys::Win32::Foundation::SetLastError;
     use windows_sys::Win32::UI::WindowsAndMessaging::{IsIconic, SW_RESTORE, ShowWindowAsync};
     unsafe {
         if IsIconic(handle) == 0 {
@@ -225,6 +226,7 @@ fn restore_if_iconic(
         if !owned_for_write(evidence)? {
             return Err(recycled_before_foreground());
         }
+        SetLastError(0);
         if ShowWindowAsync(handle, SW_RESTORE) == 0 {
             return Err(before_activation(hresult::win32_last_error(
                 "ShowWindowAsync failed while restoring target",
@@ -245,12 +247,61 @@ fn restore_if_iconic(
 }
 
 #[cfg(target_os = "windows")]
+struct ForegroundThreadAttachment {
+    attached: Option<(u32, u32)>,
+}
+
+#[cfg(target_os = "windows")]
+impl ForegroundThreadAttachment {
+    fn attach_for(target: super::window_enum::WindowHandle, remaining_ms: u64) -> Self {
+        use windows_sys::Win32::System::Threading::{AttachThreadInput, GetCurrentThreadId};
+        use windows_sys::Win32::UI::WindowsAndMessaging::{
+            GetForegroundWindow, GetWindowThreadProcessId,
+        };
+
+        let foreground = unsafe { GetForegroundWindow() };
+        if foreground.is_null()
+            || foreground == target
+            || !super::window_enum::window_is_responsive_within(foreground, remaining_ms)
+        {
+            return Self { attached: None };
+        }
+        let foreground_tid = unsafe { GetWindowThreadProcessId(foreground, core::ptr::null_mut()) };
+        let current_tid = unsafe { GetCurrentThreadId() };
+        let attached = foreground_tid != 0
+            && foreground_tid != current_tid
+            && unsafe { AttachThreadInput(current_tid, foreground_tid, 1) } != 0;
+        Self {
+            attached: attached.then_some((current_tid, foreground_tid)),
+        }
+    }
+}
+
+#[cfg(target_os = "windows")]
+impl Drop for ForegroundThreadAttachment {
+    fn drop(&mut self) {
+        if let Some((current_tid, foreground_tid)) = self.attached.take() {
+            unsafe {
+                let _ = windows_sys::Win32::System::Threading::AttachThreadInput(
+                    current_tid,
+                    foreground_tid,
+                    0,
+                );
+            }
+        }
+    }
+}
+
+#[cfg(target_os = "windows")]
 fn bring_to_foreground(
     handle: super::window_enum::WindowHandle,
     evidence: &WindowIdentityEvidence<'_>,
+    remaining_ms: u64,
 ) -> Result<(), AdapterError> {
+    use windows_sys::Win32::Foundation::SetLastError;
     use windows_sys::Win32::UI::WindowsAndMessaging::{
-        IsWindowVisible, SW_SHOW, SetForegroundWindow, ShowWindowAsync,
+        IsWindowVisible, SW_SHOW, SWP_ASYNCWINDOWPOS, SWP_NOMOVE, SWP_NOSIZE, SetForegroundWindow,
+        SetWindowPos, ShowWindowAsync,
     };
 
     unsafe {
@@ -258,15 +309,26 @@ fn bring_to_foreground(
             return Err(recycled_before_foreground());
         }
         if IsWindowVisible(handle) == 0 {
+            SetLastError(0);
             if ShowWindowAsync(handle, SW_SHOW) == 0 {
                 return Err(before_activation(hresult::win32_last_error(
                     "ShowWindowAsync failed while showing target",
                 )));
             }
         }
+        let _attachment = ForegroundThreadAttachment::attach_for(handle, remaining_ms);
         if !owned_for_write(evidence)? {
             return Err(recycled_before_foreground());
         }
+        let _ = SetWindowPos(
+            handle,
+            core::ptr::null_mut(),
+            0,
+            0,
+            0,
+            0,
+            SWP_ASYNCWINDOWPOS | SWP_NOMOVE | SWP_NOSIZE,
+        );
         let _ = SetForegroundWindow(handle);
     }
     Ok(())
@@ -276,6 +338,7 @@ fn bring_to_foreground(
 fn bring_to_foreground(
     _handle: super::window_enum::WindowHandle,
     _evidence: &WindowIdentityEvidence<'_>,
+    _remaining_ms: u64,
 ) -> Result<(), AdapterError> {
     Err(AdapterError::not_supported("focus_window"))
 }

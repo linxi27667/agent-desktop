@@ -38,7 +38,8 @@ impl agent_desktop_core::SystemOps for CountingAdapter {
 
 fn args(commands: Value, timeout_ms: u64) -> BatchArgs {
     BatchArgs {
-        commands_json: commands.to_string(),
+        commands_json: Some(commands.to_string()),
+        stdin: false,
         stop_on_error: false,
         timeout_ms,
     }
@@ -177,7 +178,8 @@ fn entry_count_and_output_are_bounded() {
     let adapter = adapter();
     let input_error = execute(
         BatchArgs {
-            commands_json: " ".repeat(MAX_BATCH_JSON_BYTES + 1),
+            commands_json: Some(" ".repeat(MAX_BATCH_JSON_BYTES + 1)),
+            stdin: false,
             stop_on_error: false,
             timeout_ms: 60_000,
         },

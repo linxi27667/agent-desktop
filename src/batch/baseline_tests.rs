@@ -83,14 +83,17 @@ impl agent_desktop_core::SystemOps for AtomicEventAdapter {
 #[test]
 fn action_then_event_wait_uses_a_pre_action_baseline() {
     let args = BatchArgs {
-        commands_json: serde_json::json!([
-            {"command": "clipboard-clear", "args": {}},
-            {
-                "command": "wait",
-                "args": {"event": "window-opened", "app": "Fixture", "timeout": 100}
-            }
-        ])
-        .to_string(),
+        commands_json: Some(
+            serde_json::json!([
+                {"command": "clipboard-clear", "args": {}},
+                {
+                    "command": "wait",
+                    "args": {"event": "window-opened", "app": "Fixture", "timeout": 100}
+                }
+            ])
+            .to_string(),
+        ),
+        stdin: false,
         stop_on_error: true,
         timeout_ms: 60_000,
     };
@@ -114,14 +117,17 @@ fn action_then_event_wait_uses_a_pre_action_baseline() {
 #[test]
 fn wait_as_first_entry_runs_with_event_baseline_none() {
     let args = BatchArgs {
-        commands_json: serde_json::json!([
-            {
-                "command": "wait",
-                "args": {"event": "window-opened", "app": "Fixture", "timeout": 100}
-            },
-            {"command": "version", "args": {}}
-        ])
-        .to_string(),
+        commands_json: Some(
+            serde_json::json!([
+                {
+                    "command": "wait",
+                    "args": {"event": "window-opened", "app": "Fixture", "timeout": 100}
+                },
+                {"command": "version", "args": {}}
+            ])
+            .to_string(),
+        ),
+        stdin: false,
         stop_on_error: false,
         timeout_ms: 60_000,
     };

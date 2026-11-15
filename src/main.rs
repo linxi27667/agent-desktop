@@ -111,13 +111,13 @@ fn run() -> ExitCode {
     {
         return dispatch::sandbox::run_exec(&cli, exec, cmd_name, &build_adapter());
     }
-    let stdin = cli_args::stdin::input(&mut cmd).is_some();
+    let redaction = cli_args::stdin::redaction(&cmd);
     if let Err(error) = cli_args::stdin::resolve_stdin_text(&mut cmd, std::io::stdin().lock()) {
         return finish(cmd_name, Err(error));
     }
     finish(
         cmd_name,
-        cli_args::stdin::redact_result(execute(cli, cmd), stdin),
+        cli_args::stdin::redact_result(execute(cli, cmd), redaction),
     )
 }
 

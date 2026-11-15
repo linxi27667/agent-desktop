@@ -21,7 +21,10 @@ pub(super) fn execute(
     let deadline = Deadline::after(args.timeout_ms)
         .map_err(|error| error.with_disposition(DeliverySemantics::not_delivered()))?;
     let batch_context = context.clone().with_inherited_deadline(deadline);
-    let mut commands = prepare(&args.commands_json, permission_report, &batch_context)?;
+    let commands_json = args.commands_json.as_deref().ok_or_else(|| {
+        AppError::invalid_input("Batch requires a JSON array argument or --stdin")
+    })?;
+    let mut commands = prepare(commands_json, permission_report, &batch_context)?;
     let total = commands.len();
     let mut results = Vec::with_capacity(total);
     let mut results_bytes = 0;

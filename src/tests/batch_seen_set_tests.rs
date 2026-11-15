@@ -104,7 +104,8 @@ fn batch_pre_seed_baseline_lets_seen_set_report_a_window_close_not_a_timeout() {
         }
     ]);
     let args = BatchArgs {
-        commands_json: commands.to_string(),
+        commands_json: Some(commands.to_string()),
+        stdin: false,
         stop_on_error: true,
         timeout_ms: 60_000,
     };

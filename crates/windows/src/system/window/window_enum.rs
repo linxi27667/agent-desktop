@@ -13,7 +13,7 @@ pub(crate) type WindowHandle = windows_sys::Win32::Foundation::HWND;
 pub(crate) type WindowHandle = *mut core::ffi::c_void;
 
 #[cfg(target_os = "windows")]
-use windows_sys::Win32::Foundation::HWND;
+use windows_sys::Win32::Foundation::{GetLastError, HWND, SetLastError};
 #[cfg(target_os = "windows")]
 use windows_sys::Win32::Graphics::Dwm::DWMWA_CLOAKED;
 #[cfg(target_os = "windows")]
@@ -88,11 +88,36 @@ pub(crate) fn enumerate_top_level(
         keep_going
     });
     let parameter = (&mut boxed as *mut Box<dyn FnMut(EnumeratedWindow) -> bool>) as isize;
+    unsafe { SetLastError(0) };
     let succeeded = unsafe { EnumWindows(Some(callback), parameter) };
-    if succeeded == 0 && !stopped_early.get() {
-        return Err(AdapterError::internal(
-            "EnumWindows failed to enumerate top-level windows",
-        ));
+    let last_error = if succeeded == 0 {
+        unsafe { GetLastError() }
+    } else {
+        0
+    };
+    enumeration_outcome(succeeded, stopped_early.get(), last_error)
+}
+
+#[cfg(any(target_os = "windows", test))]
+fn enumeration_outcome(
+    succeeded: i32,
+    stopped_early: bool,
+    last_error: u32,
+) -> Result<(), AdapterError> {
+    if succeeded == 0 && !stopped_early && last_error != 0 {
+        #[cfg(target_os = "windows")]
+        {
+            return Err(crate::system::runtime::hresult::adapter_error_from_win32(
+                last_error,
+                "EnumWindows failed to enumerate top-level windows",
+            ));
+        }
+        #[cfg(not(target_os = "windows"))]
+        {
+            return Err(AdapterError::internal(
+                "EnumWindows failed to enumerate top-level windows",
+            ));
+        }
     }
     Ok(())
 }
@@ -211,6 +236,14 @@ mod tests {
         assert!(total > 0, "a desktop has at least one top-level window");
         assert!(visible > 0, "the shell is visible");
     }
+
+    #[test]
+    fn zero_return_without_win32_error_represents_an_empty_desktop() {
+        assert!(enumeration_outcome(0, false, 0).is_ok());
+        assert!(enumeration_outcome(0, true, 5).is_ok());
+        assert!(enumeration_outcome(1, false, 5).is_ok());
+        assert!(enumeration_outcome(0, false, 5).is_err());
+    }
 }
 
 /// How long a window gets to answer the liveness ping before a caller treats
@@ -225,13 +258,21 @@ const PUMP_PROBE_MS: u64 = 500;
 /// refusal is the caller's - activation and window operations report the same
 /// condition with different envelopes - so only the probe is shared.
 pub(crate) fn window_is_responsive(handle: WindowHandle) -> bool {
+    window_is_responsive_within(handle, PUMP_PROBE_MS)
+}
+
+pub(crate) fn window_is_responsive_within(handle: WindowHandle, max_ms: u64) -> bool {
     #[cfg(target_os = "windows")]
     {
-        crate::tree::automation::window_is_pumping(handle as isize, PUMP_PROBE_MS)
+        let budget_ms = max_ms.min(PUMP_PROBE_MS);
+        if budget_ms == 0 {
+            return false;
+        }
+        crate::tree::automation::window_is_pumping(handle as isize, budget_ms)
     }
     #[cfg(not(target_os = "windows"))]
     {
-        let _ = handle;
+        let _ = (handle, max_ms);
         true
     }
 }

@@ -170,14 +170,14 @@ macOS (Notification Center), Windows (Action Center) and Linux (GNOME Shell) sup
 ## Batch
 
 ```bash
-agent-desktop batch '[
-  {"command":"click","args":{"ref_id":"@s8f3k2p9:e1"}},
-  {"command":"wait","args":{"ms":200}},
-  {"command":"press","args":{"combo":"return"}}
-]' --stop-on-error
+printf '%s\n' '[
+  {"command":"set-value","args":{"ref_id":"@s8f3k2p9:e1","value":"hello"}},
+  {"command":"get","args":{"ref_id":"@s8f3k2p9:e1","property":"value"}},
+  {"command":"click","args":{"ref_id":"@s8f3k2p9:e2"}}
+]' | agent-desktop batch --stdin --stop-on-error
 ```
 
-Batch saves process starts. It is not a transaction. Entries after a failure run unless you pass `--stop-on-error`.
+Batch saves process starts, and `--stdin` keeps text values out of `argv`. It is not a transaction. Entries after a failure run unless you pass `--stop-on-error`.
 
 ## Trace a multi-step run
 
@@ -204,3 +204,5 @@ The core skill already states the rules on refs, waits, headed mode and retries.
 4. **Window snapshot while an overlay is open.** Snapshot the surface instead.
 5. **Hand-rolled CDP.** Use a real CDP client. Raw WebSocket scripts and app-internal APIs break silently and verify nothing.
 6. **Parallel writers on one editor.** Click-to-edit, type and commit are not atomic. Serialize the sequence, and after an uncertain delivery read the state before you act.
+7. **Spawning one CLI process per step when refs are already known.** Combine multi-step sequences (`set-value` + `get` + `click`, or clipboard paste + key + `clipboard-clear`) into one `batch --stdin --stop-on-error` call.
+8. **Repeatedly polling `find` or `snapshot` on a custom-drawn window.** When `snapshot -i` reports zero client controls (or only title-bar chrome buttons), stop searching for accessibility refs.

@@ -171,7 +171,8 @@ fn batch_entries_settle_their_failures_by_their_own_command() {
 
     let output = crate::batch::execute(
         BatchArgs {
-            commands_json: commands.to_string(),
+            commands_json: Some(commands.to_string()),
+            stdin: false,
             stop_on_error: false,
             timeout_ms: 60_000,
         },
@@ -205,7 +206,11 @@ fn stdin_dispatch_omits_values_and_preserves_delivery() {
         assert_eq!(error.disposition, DeliverySemantics::uncertain());
     }
     assert_eq!(
-        crate::cli_args::stdin::redact_result(Ok(data), true).unwrap(),
+        crate::cli_args::stdin::redact_result(
+            Ok(data),
+            crate::cli_args::stdin::StdinRedaction::AllValues,
+        )
+        .unwrap(),
         redacted
     );
 }

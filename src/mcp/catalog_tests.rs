@@ -226,7 +226,7 @@ fn global_flags_cannot_be_set_per_call() {
 
 #[test]
 fn stdin_input_is_not_exposed_to_mcp_calls() {
-    for path in [["type"], ["set-value"], ["clipboard-set"]] {
+    for path in [["type"], ["set-value"], ["clipboard-set"], ["batch"]] {
         let tool = tool_at(&path);
         assert!(
             tool.definition()["inputSchema"]["properties"]

@@ -177,6 +177,7 @@ fn show_verb(
         ShowVerb::Restore => SW_RESTORE,
     };
     ensure_owned_before(evidence)?;
+    unsafe { windows_sys::Win32::Foundation::SetLastError(0) };
     if unsafe { ShowWindowAsync(handle, command) } == 0 {
         return Err(before_write(win32_last_error("ShowWindowAsync failed")));
     }

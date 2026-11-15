@@ -139,7 +139,7 @@ fn raise_branch_fails_closed_on_recycled_ownership() {
     info.process_instance = Some("windows-proc-v1:0:0".into());
     let handle = parse_handle(&info.id);
     let evidence = WindowIdentityEvidence::from_info(handle, &info).expect("evidence");
-    let error = bring_to_foreground(handle, &evidence).expect_err("recycled raise");
+    let error = bring_to_foreground(handle, &evidence, 250).expect_err("recycled raise");
     assert_eq!(error.code, ErrorCode::WindowNotFound);
     assert_eq!(
         error.disposition.delivery(),
