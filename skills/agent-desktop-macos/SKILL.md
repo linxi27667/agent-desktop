@@ -27,8 +27,10 @@ retains its process's cached report.
 
 `permissions` does not prompt. Requests use a bounded isolated helper.
 The permission guide opens a visible settings page and guide panel, so ask the
-user before starting it. Automation may report `unknown` when consent would
-require a prompt.
+user before starting it. It offers the app that started agent-desktop's process
+tree: under tmux, the app that started the tmux server, which can differ from
+the terminal you attach from; under SSH, the `agent-desktop` binary. Automation
+may report `unknown` when consent would require a prompt.
 
 ## Platform behavior
 
